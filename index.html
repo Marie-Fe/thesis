@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Handprint Capture</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+        }
+        #camera {
+            border: 1px solid #ccc;
+            width: 100%;
+            max-width: 500px;
+            height: auto;
+            margin-bottom: 20px;
+        }
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Capture Handprint</h1>
+    <video id="camera" autoplay></video>
+    <button onclick="captureHandprint()">Capture Handprint</button>
+    <button onclick="sendHandprint()">Send Handprint</button>
+
+    <script>
+        let cameraStream;
+        let capturedImageData;
+
+        // Access the device camera
+        function startCamera() {
+            navigator.mediaDevices.getUserMedia({ video: true })
+                .then(stream => {
+                    cameraStream = stream;
+                    document.getElementById('camera').srcObject = stream;
+                })
+                .catch(error => {
+                    console.error("Error accessing camera: ", error);
+                });
+        }
+
+        // Capture the handprint (snapshot from the camera)
+        function captureHandprint() {
+            const video = document.getElementById('camera');
+            const canvas = document.createElement('canvas');
+            const context = canvas.getContext('2d');
+
+            // Set canvas size to match the video dimensions
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+
+            // Draw the video frame to the canvas
+            context.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+            // Convert the canvas to a base64-encoded image
+            capturedImageData = canvas.toDataURL('image/png');
+            alert('Handprint captured!');
+        }
+
+        // Send the captured handprint to the Flask server
+        function sendHandprint() {
+            if (!capturedImageData) {
+                alert("Please capture a handprint first!");
+                return;
+            }
+
+            const userName = prompt("Enter your name:");
+
+            if (!userName) {
+                alert("Name is required to register.");
+                return;
+            }
+
+            const data = {
+                image: capturedImageData,
+                name: userName
+            };
+
+            fetch('http://<your-server-ip>:5000/upload', { // Replace with your server IP address or domain
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(data)
+            })
+            .then(response => response.json())
+            .then(data => {
+                alert("Response from server: " + data.message);
+            })
+            .catch(error => {
+                console.error('Error sending handprint:', error);
+                alert("There was an error sending the handprint.");
+            });
+        }
+
+        // Start the camera when the page loads
+        window.onload = startCamera;
+    </script>
+</body>
+</html>
